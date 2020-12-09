@@ -1,0 +1,101 @@
+using Mirror;
+using UnityEngine;
+using UnityEngine.Video;
+using System;
+
+namespace FirstGearGames.Mirrors.InteractingSceneObjects
+{
+
+    [RequireComponent(typeof(UsableIdAssigner))]
+    public class Interactee : NetworkBehaviour, INetworkUsable
+    {
+        public VideoPlayer VideoPlayer;
+
+        #region Private.
+        /// <summary>
+        /// Id of this usable. Assigned at runtime.
+        /// </summary>
+        [SyncVar]
+        private int _id;
+        #endregion
+        [SyncVar]
+        public bool videoIsPlayed;
+
+  
+
+        [SyncVar]
+        private DateTime initialVideoStart;
+
+
+        
+        
+        #region INetworkUsable.
+        public void SetId(int value) { _id = value;
+        }
+        public int GetId() {
+            return _id;
+            
+        }
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            
+            if (videoIsPlayed)
+            {
+                TimeSpan clientVideoStartSpan = DateTime.Now - initialVideoStart;
+                float clientVideoStart = clientVideoStartSpan.Seconds; 
+               
+                VideoPlayer.time = clientVideoStart;
+                VideoPlayer.Play();
+            }
+
+            
+        }
+            public NetworkIdentity GetNetworkIdentity() { return base.netIdentity; }
+        public void Use()
+        {
+            if (base.isServer)
+            {
+                RpcPlayPauseClips();
+            }
+            else if (base.isClient)
+            {
+                CmdPlayPauseClips();
+            }
+               
+        }
+        #endregion
+
+        [Command]
+        private void CmdPlayPauseClips()
+        {
+
+            RpcPlayPauseClips();
+        }
+        [ClientRpc]
+        private void RpcPlayPauseClips()
+        {
+            PlayPauseClips();
+        }
+        private void PlayPauseClips()
+        {
+            if (!VideoPlayer.isPlaying)
+            {
+                videoIsPlayed = true;
+                initialVideoStart = DateTime.Now;
+                VideoPlayer.Play();
+                
+                
+            }
+            else
+            {
+                VideoPlayer.Pause();
+                videoIsPlayed = false;
+
+            }
+        }
+    }
+
+
+}
