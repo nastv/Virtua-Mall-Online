@@ -1,0 +1,132 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Video;
+using Mirror;
+using System;
+
+
+namespace FirstGearGames.Mirrors.InteractingSceneObjects
+{
+	[RequireComponent(typeof(UsableIdAssigner))]
+	public class VideoPlaylist : NetworkBehaviour, INetworkUsable
+	{
+		#region Private
+		[SyncVar]
+		private int _id;
+
+		public VideoClip[] clips;
+		public VideoPlayer VideoPlayer;
+		[SyncVar]
+		private int i;
+		[SyncVar]
+		private bool videoIsSwitched;
+
+		[SyncVar]
+		private DateTime initialVideoStart;
+		#endregion
+
+		#region INetworkUsable.
+		//public AudioSource audioSource;
+		//public AudioClip audioClip;
+
+
+
+		// Use this for initialization
+
+		public void SetId(int value) { _id = value; }
+		public int GetId() { return _id; }
+		public NetworkIdentity GetNetworkIdentity() { return base.netIdentity; }
+		public void Use()
+		{
+			if (base.isServer)
+
+			{
+				RpcSwitchClips();
+			}
+			else if (base.isClient)
+			{
+				CmdSwitchClips();
+			}
+		}
+		private VideoClip GetRandomClip()
+		{
+			i++;
+			VideoPlayer.clip = clips[i];
+			if (i > (clips.Length - 2))
+			{
+				i -= 12;
+			}
+			return clips[i];
+
+		}
+
+		private VideoClip GetClipValue()
+        {
+			VideoPlayer.clip = clips[i];
+			return clips[i];
+        }
+
+		public override void OnStartClient()
+		{
+			base.OnStartClient();
+
+
+			if (videoIsSwitched)
+			{
+
+				
+
+				GetClipValue();
+				VideoPlayer.Play();
+
+                if (VideoPlayer.isPlaying)
+                {
+					TimeSpan clientVideoStartSpan = DateTime.Now - initialVideoStart;
+					float clientVideoStart = clientVideoStartSpan.Seconds;
+
+					VideoPlayer.time = clientVideoStart;
+				}
+			}
+			VideoPlayer.isLooping = false;
+			//audioSource = GetComponent<AudioSource>();
+
+
+
+
+
+		}
+		#endregion
+		[Command]
+		private void CmdSwitchClips()
+		{
+			RpcSwitchClips();
+		}
+		[ClientRpc]
+		private void RpcSwitchClips()
+		{
+			SwitchClips();
+		}
+		// Update is called once per frame
+
+		private void SwitchClips()
+		{
+
+			videoIsSwitched = true;
+
+
+			VideoPlayer.clip = GetRandomClip();
+			initialVideoStart = DateTime.Now;
+
+			//VideoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+			VideoPlayer.Play();
+			//audioSource.Play();
+
+
+
+		}
+
+	}
+	
+
+}
